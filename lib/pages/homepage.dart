@@ -1,22 +1,33 @@
-
-
-
 import 'package:contacts_service/contacts_service.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+   HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
+
+  bool dataLoaded = false;
+
+  Future<bool> dataLoadCheck() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey("loadDataSucess")) {
+      dataLoaded = true;
+    }
+    return false;
+  }
 }
 
 class _HomePageState extends State<HomePage> {
- Future<void> _askPermissions(String routeName) async {
+  Future<void> _askPermissions(String routeName) async {
     PermissionStatus permissionStatus = await _getContactPermission();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (permissionStatus == PermissionStatus.granted) {
-        List<Contact> contacts = await ContactsService.getContacts(); 
-        } else {
+      await ContactsService.getContacts();
+      prefs.setBool("loadDataSucess", true);
+    } else {
       _handleInvalidPermissions(permissionStatus);
     }
   }
@@ -34,7 +45,7 @@ class _HomePageState extends State<HomePage> {
 
   void _handleInvalidPermissions(PermissionStatus permissionStatus) {
     if (permissionStatus == PermissionStatus.denied) {
-      const snackBar =SnackBar(content:  Text('Access to contact data denied'));
+      const snackBar = SnackBar(content: Text('Access to contact data denied'));
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } else if (permissionStatus == PermissionStatus.permanentlyDenied) {
       const snackBar =
@@ -46,16 +57,17 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contacts Plugin Example')),
+      appBar: AppBar(title: const Text('Hi user! Welcome')),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            ElevatedButton(
-              child: const Text('Load contacts !'),
-              onPressed: () => _askPermissions('/contactsList'),
-            ),
-          
+            widget.dataLoaded == true
+                ? ElevatedButton(
+                    child: const Text('Load contacts !'),
+                    onPressed: () => _askPermissions('/contactsList'),
+                  )
+                : Container(),
           ],
         ),
       ),
